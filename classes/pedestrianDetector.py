@@ -1,45 +1,50 @@
-import numpy as np
 import cv2
-from matplotlib import pyplot as plt
+import numpy as np
+
+from ultralytics import YOLO
+import torch
+from ultralytics.utils.ops import scale_image
+
+from classes.detectedObect import DetectedObject
 
 detectClasses = {
-    0 # 'person'
+    0  # 'person'
 }
+
 
 class PedestrianDetector(object):
     def __init__(self):
-        self.classes = open('coco.names').read().strip().split('\n')
 
-        self.colors = np.random.randint(0, 255, size=(len(self.classes), 3), dtype='uint8')
+        self.model = YOLO('yolov8n-seg.pt')
+        # self.net = cv2.dnn.readNetFromDarknet('yolov3.cfg', 'yolov3.weights')
+        # self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
 
-        self.net = cv2.dnn.readNetFromDarknet('yolov3.cfg', 'yolov3.weights')
-        self.net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+        # ln = self.net.getLayerNames()
+        # try:
+        #     ln = [ln[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
+        # except IndexError:
+        #     ln = [ln[i - 1] for i in self.net.getUnconnectedOutLayers()]
+        #
+        # self.ln = ln
 
-        ln = self.net.getLayerNames()
-        try:
-            ln = [ln[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
-        except IndexError:
-            ln = [ln[i - 1] for i in self.net.getUnconnectedOutLayers()]
+    def detect(self, image_input):
 
-        self.ln = ln
-
-    def detect(self, image):
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
-        blob = cv2.dnn.blobFromImage(image, 1 / 255.0, (416, 416), swapRB=True, crop=False)
-
-        self.net.setInput(blob)
-        outputs = self.net.forward(self.ln)
+        image = cv2.cvtColor(image_input, cv2.COLOR_BGR2RGB)
+        results = self.model(image)
 
         detected = []
-        for out in outputs:
-            for detection in out:
-                scores = detection[5:]
-                classID = np.argmax(scores)
-                if not classID in detectClasses:
-                    continue
-                confidence = scores[classID]
-                if confidence >= 0.3:
-                    detected.append(out)
+        for result in results:
+            masks = result.masks.data
+            boxes = result.boxes.data
+            # extract classes
+            clss = boxes[:, 5]
 
-        return outputs
+            # get indices of results where class is 0 (people in COCO)
+            people_indices = torch.where(clss == 0)
+            # use these indices to extract the relevant masks
+            people_masks = masks[people_indices]
+            # scale for visualizing results
+            people_mask = torch.any(people_masks, dim=0).int()
+            detected.append(DetectedObject(people_mask.cpu().numpy()))
+
+        return detected

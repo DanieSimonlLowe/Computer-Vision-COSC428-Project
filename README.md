@@ -13,4 +13,5 @@ use some wiggle room if with in 6 meters then send sigle that says a person is d
 
 
 used
+https://www.kaggle.com/datasets/tapakah68/segmentation-full-body-mads-dataset
 https://pjreddie.com/media/files/yolov3.weights
