@@ -24,6 +24,13 @@ class PedestrianDetector(object):
 
         detected = []
         for result in results:
+            if result is None:
+                continue
+            if result.masks is None:
+                continue
+            if result.boxes is None:
+                continue
+
             masks = result.masks.data
             boxes = result.boxes.data
             clss = boxes[:, 5]
