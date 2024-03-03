@@ -43,13 +43,12 @@ while cv2.waitKey(1) < 0:
 
     # converted the depth frame to a numpy array
     depth_image = np.asanyarray(depth_frame.get_data())
-    print(np.max(depth_image))
-    print(depth_scale)
 
     # processed to reduce noise and outliers for the depth image
-    depth_image_proc = cv2.inRange((depth_image / 256).astype(np.uint8), 2, 5)
     depth_image_proc = cv2.morphologyEx(depth_image, cv2.MORPH_OPEN, kernel, iterations=4)
     depth_image_proc = cv2.morphologyEx(depth_image_proc, cv2.MORPH_OPEN, kernel, iterations=4)
+    depth_image_proc = cv2.GaussianBlur(depth_image_proc, (5, 5), 0)
+
 
     min_dist = np.inf
     closest = None

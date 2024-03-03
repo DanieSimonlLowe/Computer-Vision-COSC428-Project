@@ -104,7 +104,6 @@ class DetectedObject:
         image_combined = cv2.addWeighted(image, 1 - alpha, image_overlay, alpha, 0)
 
         if self._contour is not None:
-            print('draw Contour')
             image_combined = cv2.drawContours(image_combined, self._contour, -1, (0, 0, 0), 3)
 
         return image_combined
