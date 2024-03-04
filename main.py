@@ -45,9 +45,9 @@ while cv2.waitKey(1) < 0:
     depth_image = np.asanyarray(depth_frame.get_data())
 
     # processed to reduce noise and outliers for the depth image
-    depth_image_proc = cv2.morphologyEx(depth_image, cv2.MORPH_OPEN, kernel, iterations=4)
-    depth_image_proc = cv2.morphologyEx(depth_image_proc, cv2.MORPH_OPEN, kernel, iterations=4)
-    depth_image_proc = cv2.GaussianBlur(depth_image_proc, (5, 5), 0)
+    # depth_image_proc = cv2.morphologyEx(depth_image, cv2.MORPH_OPEN, kernel, iterations=4)
+    # depth_image_proc = cv2.morphologyEx(depth_image_proc, cv2.MORPH_OPEN, kernel, iterations=4)
+    # depth_image_proc = cv2.GaussianBlur(depth_image_proc, (5, 5), 0)
 
 
     min_dist = np.inf
@@ -55,7 +55,7 @@ while cv2.waitKey(1) < 0:
 
     for obj in objects:
         # for each detected object get there Detection state and highlight them with a color based on that
-        state = obj.get_warning_state(depth_image_proc, depth_scale)
+        state = obj.get_warning_state(depth_image, depth_scale)
         if state == DetectionState.SAFE:
             color_image = obj.highlight(color_image, GREEN)
         elif state == DetectionState.WARNING:
