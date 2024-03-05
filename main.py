@@ -11,22 +11,24 @@ RED = (0, 0, 200)
 
 # set up video input for camera
 config = rs.config()
-# config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-# config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-# config.enable_stream(rs.stream.infrared, 1, 640, 480, rs.format.y8, 30)
-# config.enable_stream(rs.stream.infrared, 2, 640, 480, rs.format.y8, 30)
-config.enable_device_from_file("video.bag")
+config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+config.enable_stream(rs.stream.infrared, 1, 640, 480, rs.format.y8, 30)
+config.enable_stream(rs.stream.infrared, 2, 640, 480, rs.format.y8, 30)
+# config.enable_device_from_file("video.bag")
 pipeline = rs.pipeline()
 profile = pipeline.start(config)
 depth_scale = profile.get_device().first_depth_sensor().get_depth_scale()
 
+print('test1')
 # created PedestrianDetector class instance
 detector = PedestrianDetector()
+print('test2')
 
 # align the color and depth images
 align = rs.align(rs.stream.color)
 
-kernel = np.ones((3, 3), np.uint8)
+# kernel = np.ones((3, 3), np.uint8)
 
 while cv2.waitKey(1) < 0:
     # retrieve the depth and color frames
@@ -43,11 +45,6 @@ while cv2.waitKey(1) < 0:
 
     # converted the depth frame to a numpy array
     depth_image = np.asanyarray(depth_frame.get_data())
-
-    # processed to reduce noise and outliers for the depth image
-    # depth_image_proc = cv2.morphologyEx(depth_image, cv2.MORPH_OPEN, kernel, iterations=4)
-    # depth_image_proc = cv2.morphologyEx(depth_image_proc, cv2.MORPH_OPEN, kernel, iterations=4)
-    # depth_image_proc = cv2.GaussianBlur(depth_image_proc, (5, 5), 0)
 
 
     min_dist = np.inf
