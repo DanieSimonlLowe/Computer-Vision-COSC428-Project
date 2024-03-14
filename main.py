@@ -11,11 +11,11 @@ RED = (0, 0, 200)
 
 # set up video input for camera
 config = rs.config()
-config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
-config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
-config.enable_stream(rs.stream.infrared, 1, 640, 480, rs.format.y8, 30)
-config.enable_stream(rs.stream.infrared, 2, 640, 480, rs.format.y8, 30)
-# config.enable_device_from_file("video.bag")
+# config.enable_stream(rs.stream.depth, 640, 480, rs.format.z16, 30)
+# config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
+# config.enable_stream(rs.stream.infrared, 1, 640, 480, rs.format.y8, 30)
+# config.enable_stream(rs.stream.infrared, 2, 640, 480, rs.format.y8, 30)
+config.enable_device_from_file("video.bag")
 pipeline = rs.pipeline()
 profile = pipeline.start(config)
 depth_scale = profile.get_device().first_depth_sensor().get_depth_scale()
@@ -46,7 +46,6 @@ while cv2.waitKey(1) < 0:
     # converted the depth frame to a numpy array
     depth_image = np.asanyarray(depth_frame.get_data())
 
-
     min_dist = np.inf
     closest = None
 
@@ -61,13 +60,13 @@ while cv2.waitKey(1) < 0:
             color_image = obj.highlight(color_image, RED)
 
         # get the object with the minimum distance
-        if min_dist < obj.distance():
+        if min_dist > obj.distance():
             min_dist = obj.distance()
             closest = obj
 
     # display the distance of the closest object
-    if obj is not None:
-        color_image = obj.show_distance(color_image)
+    if closest is not None:
+        color_image = closest.show_distance(color_image)
 
     # show the color_image with overlays
     cv2.imshow('frame', color_image)

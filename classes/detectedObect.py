@@ -78,7 +78,7 @@ class DetectedObject:
             if has_changed:
                 break
 
-        # returns the min dist if it makes sense else returns the medain dist.
+        # returns the min dist if it makes sense else returns the median dist.
         if dist - dist_min < assumed_arm_length:
             self._distance = dist_min
             return dist_min
