@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 from ultralytics import YOLO
 import torch
@@ -11,8 +12,9 @@ class PedestrianDetector(object):
     Pedestrian detector
     creates an instance of the DetectedObject class to detect pedestrians
     """
-    def __init__(self):
 
+    def __init__(self):
+        self.last = []
         self.model = YOLO('yolov8n-seg.pt')
 
     """
@@ -20,7 +22,8 @@ class PedestrianDetector(object):
     :arg image: a color image as numpy array
     :return: a list of detected pedestrians as an array of DetectedObjects
     """
-    def detect(self, image_input):
+
+    def detect(self, image_input, depth_image, scale):
         # runs the model and gets how it segregates the image
         image = cv2.cvtColor(image_input, cv2.COLOR_BGR2RGB)
         results = self.model(image)
@@ -43,8 +46,22 @@ class PedestrianDetector(object):
             people_indices = torch.where(clss == 0)
             # gets all the masks of all the people in the image
             people_masks = masks[people_indices]
+
+            people_boxes = boxes[people_indices]
             # for each mask adds it to the list of detected masks as a DetectedObject
-            for mask in people_masks:
-                detected.append(DetectedObject(mask.cpu().numpy()))
+            for mask, box in zip(people_masks, people_boxes):
+                obj = DetectedObject(mask.cpu().numpy(), box.cpu().numpy()[:4])
+                min_diff = np.inf
+                best = None
+                for old in self.last:
+                    diff = obj.get_diff(old, depth_image, scale)
+                    if diff < min_diff:
+                        min_diff = diff
+                        best = old
+                if best is not None:
+                    obj.calc_trajectories(best)
+                    self.last.remove(best)
+                detected.append(obj)
+        self.last = detected
 
         return detected

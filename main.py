@@ -6,7 +6,7 @@ from classes.pedestrianDetector import PedestrianDetector
 import pyrealsense2 as rs
 
 GREEN = (0, 255, 0)
-ORANGE = (0, 165, 255)
+ORANGE = (255, 0, 255)
 RED = (0, 0, 200)
 
 # set up video input for camera
@@ -40,11 +40,11 @@ while cv2.waitKey(1) < 0:
     # converted the color frame to a numpy array
     color_image = np.asanyarray(color_frame.get_data())
 
-    # detected pedestrians from the color image.
-    objects = detector.detect(color_image)
-
     # converted the depth frame to a numpy array
     depth_image = np.asanyarray(depth_frame.get_data())
+
+    # detected pedestrians from the color image.
+    objects = detector.detect(color_image, depth_image, depth_scale)
 
     min_dist = np.inf
     closest = None
