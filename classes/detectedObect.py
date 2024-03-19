@@ -32,8 +32,9 @@ class DetectedObject:
 
         self.speed = 0
 
+        # self.images = []
+
     def calc_trajectories(self, old):
-        olds = []
 
         if len(old.trajectories) > 0:
             olds = old.trajectories
@@ -55,12 +56,12 @@ class DetectedObject:
             if best_dist is not None:
                 new_speed = (dist1 - best_dist) / (self.time - old.time)
 
-                speed = (new_speed + 3 * best_speed) * 0.25
+                speed = (new_speed + 9 * best_speed) * 0.1
 
                 self.trajectories.append((dist1, speed, contour))
 
         new_speed = (self.distance() - old.distance()) / (self.time - old.time)
-        self.speed = (new_speed + 3 * old.speed) * 0.25
+        self.speed = (new_speed + 9 * old.speed) * 0.1
 
     """
     calculates the distance of an object from the camera.
@@ -91,6 +92,7 @@ class DetectedObject:
             thresh = cv2.inRange(regions_image, level, level + 5)
             opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=3)
             closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel, iterations=3)
+            # self.images.append(closing)
 
             contours, hierarchy = cv2.findContours(closing, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -116,8 +118,8 @@ class DetectedObject:
                         self._contour = cnt
                         has_changed = True
 
-            if has_changed:
-                break
+            # if has_changed:
+            #     break
 
         # returns the min dist if it makes sense else returns the median dist.
         self._distance = dist_min
@@ -166,6 +168,20 @@ class DetectedObject:
     """
 
     def highlight(self, image, color):
+        # if len(self.images) > 0:
+        #     colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255),]
+        #     for i, img in enumerate(self.images):
+        #         if img.shape != (480, 640):
+        #             continue
+        #         img = np.expand_dims(img, 0).repeat(3, axis=0)
+        #
+        #         img = np.moveaxis(img, 0, -1)
+        #         masked = np.ma.MaskedArray(image, mask=img, fill_value=colors[i % 3])
+        #
+        #         image_overlay = masked.filled()
+        #         image = cv2.addWeighted(image, 0, image_overlay, 1, 0)
+        #     return image
+
         colored_mask = np.expand_dims(self.mask, 0).repeat(3, axis=0)
         colored_mask = np.moveaxis(colored_mask, 0, -1)
 
