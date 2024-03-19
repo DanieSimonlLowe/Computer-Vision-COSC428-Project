@@ -25,11 +25,12 @@ class DetectedObject:
         self.speed = 0
         self._distance = None
         self._contour = None
-        self._trad_contour = None
         self.tracked_contours = []
         self.time = time.time()
 
         self.trajectories = []
+
+        self.speed = 0
 
     def calc_trajectories(self, old):
         olds = []
@@ -54,9 +55,12 @@ class DetectedObject:
             if best_dist is not None:
                 new_speed = (dist1 - best_dist) / (self.time - old.time)
 
-                speed = (new_speed + best_speed) * 0.5
+                speed = (new_speed + 3 * best_speed) * 0.25
 
                 self.trajectories.append((dist1, speed, contour))
+
+        new_speed = (self.distance() - old.distance()) / (self.time - old.time)
+        self.speed = (new_speed + 3 * old.speed) * 0.25
 
     """
     calculates the distance of an object from the camera.
@@ -123,7 +127,7 @@ class DetectedObject:
         old_dist = old.distance()
         dist = self.distance(image, scale)
 
-        return np.sum((self.box - old.box) ** 2) + (old_dist - dist) ** 2
+        return np.sum((self.box - old.box) ** 2) + 10 * (old_dist - dist) ** 2
 
     def get_screen_pos(self):
 
@@ -145,12 +149,15 @@ class DetectedObject:
 
         if dist <= 3:
             return DetectionState.DANGER
-
-        for dist, change, contour in self.trajectories:
-            end_dist = dist + change * 30
+        print(self.trajectories)
+        for dist, speed, _ in self.trajectories:
+            end_dist = dist + speed * 3
             if end_dist <= 3:
-                self._trad_contour = contour
                 return DetectionState.WARNING
+
+        end_dist = self.distance() + self.speed * 3
+        if end_dist <= 3:
+            return DetectionState.WARNING
 
         return DetectionState.SAFE
 
@@ -169,9 +176,6 @@ class DetectedObject:
 
         if self._contour is not None:
             image_combined = cv2.drawContours(image_combined, self._contour, -1, (0, 0, 0), 3)
-
-        if self._trad_contour is not None:
-            image_combined = cv2.drawContours(image_combined, self._trad_contour, -1, (0, 0, 0), 3)
 
         return image_combined
 

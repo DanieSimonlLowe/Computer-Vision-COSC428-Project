@@ -60,7 +60,6 @@ class PedestrianDetector(object):
                         best = old
                 if best is not None:
                     obj.calc_trajectories(best)
-                    self.last.remove(best)
                 detected.append(obj)
         self.last = detected
 
