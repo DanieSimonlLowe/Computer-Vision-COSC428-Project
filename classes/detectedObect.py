@@ -134,7 +134,7 @@ class DetectedObject:
     def get_screen_pos(self):
 
         if self._contour is None:
-            return 0, 0
+            return [np.average(indices) for indices in np.where(self.mask >= 255)]
         else:
             m = cv2.moments(self._contour)
 
@@ -151,7 +151,6 @@ class DetectedObject:
 
         if dist <= 3:
             return DetectionState.DANGER
-        print(self.trajectories)
         for dist, speed, _ in self.trajectories:
             end_dist = dist + speed * 3
             if end_dist <= 3:
@@ -203,3 +202,8 @@ class DetectedObject:
         image = cv2.putText(image, str(self._distance), (50, 100), cv2.FONT_HERSHEY_SIMPLEX,
                             1, (0, 0, 0), 2, cv2.LINE_AA)
         return image
+
+    def keep(self, now):
+        age = now - self.time
+        if age < 2:
+            return True

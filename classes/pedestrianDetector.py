@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-
+import time
 from ultralytics import YOLO
 import torch
 
@@ -24,12 +24,16 @@ class PedestrianDetector(object):
     """
 
     def detect(self, image_input, depth_image, scale):
+        now = time.time()
+        self.last = [item for item in self.last if item.keep(now)]
+
         # runs the model and gets how it segregates the image
         image = cv2.cvtColor(image_input, cv2.COLOR_BGR2RGB)
         results = self.model(image)
 
         detected = []
 
+        used = set()
         for result in results:
             if result is None:
                 continue
@@ -49,6 +53,7 @@ class PedestrianDetector(object):
 
             people_boxes = boxes[people_indices]
             # for each mask adds it to the list of detected masks as a DetectedObject
+
             for mask, box in zip(people_masks, people_boxes):
                 obj = DetectedObject(mask.cpu().numpy(), box.cpu().numpy()[:4])
                 min_diff = np.inf
@@ -58,9 +63,11 @@ class PedestrianDetector(object):
                     if diff < min_diff:
                         min_diff = diff
                         best = old
+                        used.add(old)
                 if best is not None:
                     obj.calc_trajectories(best)
                 detected.append(obj)
-        self.last = detected
+
+        self.last = detected + list(used.difference(self.last))
 
         return detected
