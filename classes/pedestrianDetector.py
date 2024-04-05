@@ -5,6 +5,7 @@ from ultralytics import YOLO
 import torch
 
 from classes.detectedObect import DetectedObject
+from classes.distanceFilter import DistanceFilter
 
 
 class PedestrianDetector(object):
@@ -16,6 +17,7 @@ class PedestrianDetector(object):
     def __init__(self):
         self.last = []
         self.model = YOLO('yolov8n-seg.pt')
+        self.fps = 0
 
     """
     Detects pedestrians
@@ -63,9 +65,12 @@ class PedestrianDetector(object):
                     if diff < min_diff:
                         min_diff = diff
                         best = old
-                        used.add(old)
                 if best is not None:
-                    obj.calc_trajectories(best)
+                    used.add(best)
+                    obj.calc_trajectories(best, self.fps)
+                else:
+                    obj.filter = DistanceFilter(obj.main_dist, self.fps)
+                    obj.init_trajectories(self.fps)
                 detected.append(obj)
 
         self.last = detected + list(used.difference(self.last))

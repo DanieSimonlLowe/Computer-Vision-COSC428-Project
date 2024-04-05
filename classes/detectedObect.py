@@ -1,8 +1,12 @@
+import random
+import sys
 import time
+from copy import deepcopy
 from enum import Enum
-
 import numpy as np
 import cv2
+
+from classes.distanceFilter import DistanceFilter
 
 alpha = 0.5
 assumed_arm_length = 0.92  # based on 35cm average male arm span with a bit added for wigle room.
@@ -20,6 +24,7 @@ class DetectionState(Enum):
 
 class DetectedObject:
     def __init__(self, mask, box):
+        self.id = random.randint(0, sys.maxsize)
         self.box = box
         self.mask = mask
         self.speed = 0
@@ -30,38 +35,49 @@ class DetectedObject:
 
         self.trajectories = []
 
-        self.speed = 0
+        # self.speed = 0
+        self.filter = None
+        self.main_dist = 0
 
-        # self.images = []
+    def init_trajectories(self, frame_rate):
+        for dist, contour in self.tracked_contours:
+            cont_filter = DistanceFilter(dist, frame_rate)
 
-    def calc_trajectories(self, old):
+            self.trajectories.append((cont_filter, contour))
 
-        if len(old.trajectories) > 0:
-            olds = old.trajectories
-        else:
-            olds = old.tracked_contours
+    def calc_trajectories(self, old, frame_rate):
+        self.id = old.id
+        self.filter = old.filter
+        old.filter.predict()
+        old.filter.update(np.array([self.main_dist]))
 
-        for dist1, _, contour in self.tracked_contours:
+        olds = old.trajectories
+
+        for dist, contour in self.tracked_contours:
             min_diff = 100
-            best_dist = None
-            best_speed = None
+            best_filter = None
+
             box = np.array(cv2.boundingRect(contour))
-            for dist2, speed, contour2 in olds:
+            for cont_filter, contour2 in olds:
                 box2 = np.array(cv2.boundingRect(contour2))
-                diff = np.sum((box - box2) ** 2) + (dist1 - dist2) ** 2
+
+                diff = np.sum((box - box2) ** 2) + (dist - cont_filter.get_current()) ** 2
                 if diff < min_diff:
                     min_diff = diff
-                    best_dist = dist2
-                    best_speed = speed
-            if best_dist is not None:
-                new_speed = (dist1 - best_dist) / (self.time - old.time)
+                    best_filter = deepcopy(cont_filter)
 
-                speed = (new_speed + 9 * best_speed) * 0.1
+            if best_filter is not None:
+                best_filter.predict()
+                best_filter.update(dist)
 
-                self.trajectories.append((dist1, speed, contour))
+                self.trajectories.append((best_filter, contour))
+            else:
+                cont_filter = DistanceFilter(dist, frame_rate)
 
-        new_speed = (self.distance() - old.distance()) / (self.time - old.time)
-        self.speed = (new_speed + 9 * old.speed) * 0.1
+                self.trajectories.append((cont_filter, contour))
+
+        # new_speed = (self.distance() - old.distance()) / (self.time - old.time)
+        # self.speed = (new_speed + 9 * old.speed) * 0.1
 
     """
     calculates the distance of an object from the camera.
@@ -80,6 +96,7 @@ class DetectedObject:
         # gets the median distance of the image which is in the mask.
         mat = np.where(self.mask, image, np.nan)
         dist = np.nanmedian(mat) * scale
+        self.main_dist = dist
 
         # Converted the image into the correct format is needed so that the edge detection and contours can run
         # scales the image so that 7.5 meters is 255
@@ -110,7 +127,7 @@ class DetectedObject:
                     masked_cnt = np.where(mask_cnt, image, np.nan)
                     dist_cnt = np.nanmedian(masked_cnt) * scale
 
-                    self.tracked_contours.append((dist_cnt, 0, cnt))
+                    self.tracked_contours.append((dist_cnt, cnt))
 
                     # if this dist is less then the min dist record the dist and the contour
                     if dist_cnt < dist_min and dist - dist_cnt < assumed_arm_length:
@@ -151,13 +168,11 @@ class DetectedObject:
 
         if dist <= 3:
             return DetectionState.DANGER
-        for dist, speed, _ in self.trajectories:
-            end_dist = dist + speed * 3
-            if end_dist <= 3:
+        for cont_filter, _ in self.trajectories:
+            if cont_filter.get_prediction() <= 3:
                 return DetectionState.WARNING
 
-        end_dist = self.distance() + self.speed * 3
-        if end_dist <= 3:
+        if self.filter.get_prediction() <= 3:
             return DetectionState.WARNING
 
         return DetectionState.SAFE

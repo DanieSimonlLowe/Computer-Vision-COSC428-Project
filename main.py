@@ -15,7 +15,7 @@ config = rs.config()
 # config.enable_stream(rs.stream.color, 640, 480, rs.format.bgr8, 30)
 # config.enable_stream(rs.stream.infrared, 1, 640, 480, rs.format.y8, 30)
 # config.enable_stream(rs.stream.infrared, 2, 640, 480, rs.format.y8, 30)
-config.enable_device_from_file("video.bag")
+config.enable_device_from_file("video.bag", repeat_playback=False)
 pipeline = rs.pipeline()
 profile = pipeline.start(config)
 depth_scale = profile.get_device().first_depth_sensor().get_depth_scale()
@@ -28,14 +28,22 @@ print('test2')
 # align the color and depth images
 align = rs.align(rs.stream.color)
 
-# kernel = np.ones((3, 3), np.uint8)
+# playback = pipeline.get_active_profile().get_device().as_playback()
+
 
 while cv2.waitKey(1) < 0:
-    # retrieve the depth and color frames
-    frames = pipeline.wait_for_frames()
+    try:
+        # retrieve the depth and color frames
+        frames = pipeline.wait_for_frames(timeout_ms=500)
+    except RuntimeError:
+        break
+
     aligned_frames = align.process(frames)
     depth_frame = aligned_frames.get_depth_frame()
     color_frame = aligned_frames.get_color_frame()
+
+    detector.fps = min(depth_frame.get_profile().as_video_stream_profile().fps(),
+              color_frame.get_profile().as_video_stream_profile().fps())
 
     # converted the color frame to a numpy array
     color_image = np.asanyarray(color_frame.get_data())
