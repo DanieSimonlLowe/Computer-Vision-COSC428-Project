@@ -47,7 +47,7 @@ class DetectedObject:
 
     def calc_trajectories(self, old, frame_rate):
         self.id = old.id
-        self.filter = old.filter
+        self.filter = deepcopy(old.filter)
         old.filter.predict()
         old.filter.update(np.array([self.main_dist]))
 
@@ -143,10 +143,10 @@ class DetectedObject:
         return dist_min
 
     def get_diff(self, old, image=None, scale=None):
-        old_dist = old.distance()
-        dist = self.distance(image, scale)
+        old_dist = old.main_dist
+        self.distance(image, scale)
 
-        return np.sum((self.box - old.box) ** 2) + 10 * (old_dist - dist) ** 2
+        return np.sum((self.box - old.box) ** 2) + 10 * (old_dist - self.main_dist) ** 2
 
     def get_screen_pos(self):
 
