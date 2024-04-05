@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import cv2
 
@@ -28,9 +30,14 @@ print('test2')
 # align the color and depth images
 align = rs.align(rs.stream.color)
 
+device = profile.get_device()
+playback = device.as_playback()
+playback.set_real_time(False)
+slow_motion_factor = 3
+
 # playback = pipeline.get_active_profile().get_device().as_playback()
 
-
+frame_counter = 0
 while cv2.waitKey(1) < 0:
     try:
         # retrieve the depth and color frames
@@ -73,11 +80,17 @@ while cv2.waitKey(1) < 0:
             closest = obj
 
     # display the distance of the closest object
-    if closest is not None:
-        color_image = closest.show_distance(color_image)
+    # if closest is not None:
+    #     color_image = closest.show_distance(color_image)
+    color_image = cv2.putText(color_image, str(frame_counter), (50, 100), cv2.FONT_HERSHEY_SIMPLEX,
+                        1, (0, 0, 0), 2, cv2.LINE_AA)
 
     # show the color_image with overlays
     cv2.imshow('frame', color_image)
+    frame_counter += 1
+
+    delay = (1 / detector.fps) * slow_motion_factor
+    time.sleep(delay)
 
 pipeline.stop()
 cv2.destroyAllWindows()

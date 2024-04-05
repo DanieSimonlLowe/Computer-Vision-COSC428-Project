@@ -15,6 +15,9 @@ def generate(input_file, output_file):
     depth_scale = profile.get_device().first_depth_sensor().get_depth_scale()
     # created PedestrianDetector class instance
     detector = PedestrianDetector()
+    device = profile.get_device()
+    playback = device.as_playback()
+    playback.set_real_time(False)
 
     # align the color and depth images
     align = rs.align(rs.stream.color)
