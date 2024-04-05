@@ -41,40 +41,43 @@ class DetectedObject:
 
     def init_trajectories(self, frame_rate):
         for dist, contour in self.tracked_contours:
-            cont_filter = DistanceFilter(dist, frame_rate)
+            cont_filter = DistanceFilter(dist, frame_rate, alpha=0.5)
 
-            self.trajectories.append((cont_filter, contour))
+            self.trajectories.append((cont_filter, contour, 0))
 
     def calc_trajectories(self, old, frame_rate):
         self.id = old.id
         self.filter = deepcopy(old.filter)
-        old.filter.predict()
-        old.filter.update(np.array([self.main_dist]))
+        self.filter.predict()
+        self.filter.update(np.array([self.main_dist]))
 
         olds = old.trajectories
 
         for dist, contour in self.tracked_contours:
-            min_diff = 100
+            min_diff = 1000
             best_filter = None
+            best_age = 0
 
             box = np.array(cv2.boundingRect(contour))
-            for cont_filter, contour2 in olds:
+            for cont_filter, contour2, age in olds:
                 box2 = np.array(cv2.boundingRect(contour2))
 
-                diff = np.sum((box - box2) ** 2) + (dist - cont_filter.get_current()) ** 2
+                diff = np.sum((box - box2) ** 2) + 1000 * (dist - cont_filter.get_current()) ** 2
+
                 if diff < min_diff:
                     min_diff = diff
+                    best_age = age
                     best_filter = deepcopy(cont_filter)
 
             if best_filter is not None:
                 best_filter.predict()
                 best_filter.update(dist)
 
-                self.trajectories.append((best_filter, contour))
+                self.trajectories.append((best_filter, contour, best_age+1))
             else:
-                cont_filter = DistanceFilter(dist, frame_rate)
+                cont_filter = DistanceFilter(dist, frame_rate, alpha=0.5)
 
-                self.trajectories.append((cont_filter, contour))
+                self.trajectories.append((cont_filter, contour, 0))
 
         # new_speed = (self.distance() - old.distance()) / (self.time - old.time)
         # self.speed = (new_speed + 9 * old.speed) * 0.1
@@ -168,8 +171,8 @@ class DetectedObject:
 
         if dist <= 3:
             return DetectionState.DANGER
-        for cont_filter, _ in self.trajectories:
-            if cont_filter.get_prediction() <= 3:
+        for cont_filter, _, age in self.trajectories:
+            if age >= 5 and cont_filter.get_prediction() <= 3:
                 return DetectionState.WARNING
 
         if self.filter.get_prediction() <= 3:

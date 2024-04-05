@@ -32,10 +32,9 @@ align = rs.align(rs.stream.color)
 
 device = profile.get_device()
 playback = device.as_playback()
-playback.set_real_time(False)
+# playback.set_real_time(False)
 slow_motion_factor = 3
 
-# playback = pipeline.get_active_profile().get_device().as_playback()
 
 frame_counter = 0
 while cv2.waitKey(1) < 0:

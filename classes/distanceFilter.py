@@ -17,9 +17,9 @@ def measurement_function(x):
 
 
 class DistanceFilter(object):
-    def __init__(self, dist, frame_rate):
+    def __init__(self, dist, frame_rate, alpha=0.1):
         dt = 1 / frame_rate
-        points = MerweScaledSigmaPoints(n=2, alpha=0.1, beta=2., kappa=-1)
+        points = MerweScaledSigmaPoints(n=2, alpha=alpha, beta=2., kappa=0)
         ukf = UnscentedKalmanFilter(dim_x=2, dim_z=1, dt=dt, hx=measurement_function,
                                     fx=state_transition, points=points)
 
@@ -37,6 +37,11 @@ class DistanceFilter(object):
         self.ukf.update(value)
 
     def get_prediction(self):
+        pr
+        if self.ukf.log_likelihood < 0.2:
+            return 9999
+
+        print(self.ukf.x)
         return self.ukf.x[0] + 3 * self.ukf.x[1]
 
     def get_frame_prediction(self):

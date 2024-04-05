@@ -69,6 +69,8 @@ class PedestrianDetector(object):
                     used.add(best)
                     obj.calc_trajectories(best, self.fps)
                 else:
+                    obj.distance(depth_image, scale)
+                    print(obj.main_dist)
                     obj.filter = DistanceFilter(obj.main_dist, self.fps)
                     obj.init_trajectories(self.fps)
                 detected.append(obj)
