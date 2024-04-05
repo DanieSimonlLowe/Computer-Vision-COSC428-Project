@@ -37,11 +37,9 @@ class DistanceFilter(object):
         self.ukf.update(value)
 
     def get_prediction(self):
-        pr
         if self.ukf.log_likelihood < 0.2:
             return 9999
 
-        print(self.ukf.x)
         return self.ukf.x[0] + 3 * self.ukf.x[1]
 
     def get_frame_prediction(self):
