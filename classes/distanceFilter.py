@@ -30,16 +30,20 @@ class DistanceFilter(object):
         ukf.Q = Q_discrete_white_noise(dim=4, dt=dt, var=1e-5, block_size=1)
 
         self.ukf = ukf
+        self.age = 0
 
     def predict(self):
         self.ukf.predict()
 
     def update(self, dist, x):
         self.ukf.update(np.array([dist, x]))
+        self.age += 1
 
     def overlap(self):
         # if self.ukf.log_likelihood < 0.2:
         #     return False
+        if self.age < 5:
+            return False
 
         start = complex(self.ukf.x[0], self.ukf.x[1])
         end = complex(self.ukf.x[0] + 3 * self.ukf.x[2], self.ukf.x[1] + 3 * self.ukf.x[3])

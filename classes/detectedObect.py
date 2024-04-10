@@ -50,7 +50,7 @@ class DetectedObject:
             pos = self.deproject_box(box, dist)
             cont_filter = DistanceFilter(pos[2], pos[0], frame_rate, alpha=0.5)
 
-            self.trajectories.append((cont_filter, contour, 0))
+            self.trajectories.append((cont_filter, contour))
 
     def deproject_box(self, box, depth):
         x = box[0] + box[2] * 0.5
@@ -77,14 +77,13 @@ class DetectedObject:
             best_box = None
 
             box = np.array(cv2.boundingRect(contour))
-            for cont_filter, contour2, age in olds:
+            for cont_filter, contour2 in olds:
                 box2 = np.array(cv2.boundingRect(contour2))
 
                 diff = np.sum((box - box2) ** 2) + 1000 * (dist - cont_filter.get_current()[0]) ** 2
 
                 if diff < min_diff:
                     min_diff = diff
-                    best_age = age
                     best_filter = deepcopy(cont_filter)
                     best_box = box2
 
@@ -93,12 +92,12 @@ class DetectedObject:
                 best_filter.predict()
                 best_filter.update(pos[2], pos[0])
 
-                self.trajectories.append((best_filter, contour, best_age + 1))
+                self.trajectories.append((best_filter, contour))
             else:
                 pos = self.deproject_box(box, dist)
                 cont_filter = DistanceFilter(pos[2], pos[0], frame_rate, alpha=0.5)
 
-                self.trajectories.append((cont_filter, contour, 0))
+                self.trajectories.append((cont_filter, contour))
 
         # new_speed = (self.distance() - old.distance()) / (self.time - old.time)
         # self.speed = (new_speed + 9 * old.speed) * 0.1
@@ -192,8 +191,8 @@ class DetectedObject:
 
         if pos[0] ** 2 + pos[2] ** 2 <= 9:
             return DetectionState.DANGER
-        for cont_filter, _, age in self.trajectories:
-            if age >= 5 and cont_filter.overlap():
+        for cont_filter, _ in self.trajectories:
+            if cont_filter.overlap():
                 return DetectionState.WARNING
 
         if self.filter.overlap():
