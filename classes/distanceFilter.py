@@ -3,51 +3,72 @@ from filterpy.common import Q_discrete_white_noise
 from filterpy.kalman import MerweScaledSigmaPoints, UnscentedKalmanFilter
 
 
-def state_transition(x, dt):
-    # Assuming a constant velocity model for simplicity
-    f = np.array([[1, dt],
-                  [0, 1]])
-    return np.dot(f, x)
+def state_transition(state, dt):
+    f = np.array([[1, 0, dt, 0],
+                  [0, 1, 0, dt],
+                  [0, 0, 1, 0],
+                  [0, 0, 0, 1],
+                  ])
+    out = np.dot(f, state)
+    return out
 
 
-def measurement_function(x):
-    # Measurement function. In this case, we measure only the distance
-    #return np.array([1, 0]).dot(x)
-    return np.array([x[0]])
+def measurement_function(state):
+    return state[:2]
 
 
 class DistanceFilter(object):
-    def __init__(self, dist, frame_rate, alpha=0.1):
+    def __init__(self, dist, x, frame_rate, alpha=0.1):
         dt = 1 / frame_rate
-        points = MerweScaledSigmaPoints(n=2, alpha=alpha, beta=2., kappa=0)
-        ukf = UnscentedKalmanFilter(dim_x=2, dim_z=1, dt=dt, hx=measurement_function,
+        points = MerweScaledSigmaPoints(n=4, alpha=alpha, beta=2., kappa=0)
+        ukf = UnscentedKalmanFilter(dim_x=4, dim_z=2, dt=dt, hx=measurement_function,
                                     fx=state_transition, points=points)
 
-        ukf.x = np.array([dist, 0])
+        ukf.x = np.array([dist, x, 0, 0])
         ukf.P *= 0.2
-        ukf.R = np.diag([0.01])
-        ukf.Q = Q_discrete_white_noise(dim=2, dt=dt, var=1e-5, block_size=1)
+        ukf.R = np.diag([0.01, 0.01])
+        ukf.Q = Q_discrete_white_noise(dim=4, dt=dt, var=1e-5, block_size=1)
 
         self.ukf = ukf
 
     def predict(self):
         self.ukf.predict()
 
-    def update(self, value):
-        self.ukf.update(value)
+    def update(self, dist, x):
+        self.ukf.update(np.array([dist, x]))
 
-    def get_prediction(self):
-        if self.ukf.log_likelihood < 0.2:
-            return 9999
+    def overlap(self):
+        # if self.ukf.log_likelihood < 0.2:
+        #     return False
 
-        return self.ukf.x[0] + 3 * self.ukf.x[1]
+        start = complex(self.ukf.x[0], self.ukf.x[1])
+        end = complex(self.ukf.x[0] + 3 * self.ukf.x[2], self.ukf.x[1] + 3 * self.ukf.x[3])
+        print(start, end)
 
-    def get_frame_prediction(self):
-        return np.sum(self.ukf.x)
+        if abs(start) < 3 or abs(end) < 3:
+            return True
+
+        ab = end - start
+
+        if abs(ab) == 0:
+            return False
+
+        ac = -start
+        ab_normalized = ab / abs(ab)
+        ap_distance = ac.real * ab_normalized.real + ac.imag * ab_normalized.imag
+        ap = ap_distance * ab_normalized
+
+        ap_proportion = ap_distance / abs(ab)
+        in_segment = 0 <= ap_proportion <= 1
+
+        cp = ap - ac
+        in_circle = abs(cp) < 3
+        return in_segment and in_circle
 
     def get_current(self):
-        return self.ukf.x[0]
+        return self.ukf.x[:2]
 
-# filter = DistanceFilter(dist=1, frame_rate=30)
+# filter = DistanceFilter(dist=1, x=1, frame_rate=30)
 # filter.predict()
-# filter.update(1.2)  # Example measurement update
+# filter.update(1.2, 1.1)  # Example measurement update
+# print(filter.get_prediction())

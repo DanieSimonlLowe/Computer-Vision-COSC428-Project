@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 import cv2
 from pandas import DataFrame
@@ -15,9 +17,9 @@ def generate(input_file, output_file):
     depth_scale = profile.get_device().first_depth_sensor().get_depth_scale()
     # created PedestrianDetector class instance
     detector = PedestrianDetector()
-    device = profile.get_device()
-    playback = device.as_playback()
-    playback.set_real_time(False)
+    # device = profile.get_device()
+    # playback = device.as_playback()
+    # playback.set_real_time(False)
 
     # align the color and depth images
     align = rs.align(rs.stream.color)
@@ -28,17 +30,24 @@ def generate(input_file, output_file):
     state_change_times = []
     state_change_target = []
     old_states = []
-    frame_counter = 0
+    start_time = time.time()
     while True:
+        print('doing frame')
         try:
             # retrieve the depth and color frames
-            frames = pipeline.wait_for_frames(timeout_ms=500)
+            frames = pipeline.wait_for_frames(timeout_ms=5000)
         except RuntimeError:
             break
 
         aligned_frames = align.process(frames)
         depth_frame = aligned_frames.get_depth_frame()
         color_frame = aligned_frames.get_color_frame()
+
+        detector.depth_intrin = depth_frame.profile.as_video_stream_profile().intrinsics
+
+        detector.fps = min(depth_frame.get_profile().as_video_stream_profile().fps(),
+                           color_frame.get_profile().as_video_stream_profile().fps())
+
         # converted the color frame to a numpy array
         color_image = np.asanyarray(color_frame.get_data())
         # converted the depth frame to a numpy array
@@ -60,16 +69,16 @@ def generate(input_file, output_file):
                 if obj.id == state_id:
                     first = False
                     if state != old_state:
-                        state_change_times.append(frame_counter)
+                        state_change_times.append(time.time() - start_time)
                         state_changes.append(state)
                         state_change_target.append(obj.id)
             if first:
-                state_change_times.append(frame_counter)
+                state_change_times.append(time.time() - start_time)
                 state_changes.append(state)
                 state_change_target.append(obj.id)
         old_states = new_states
 
-        frame_counter += 1
+
     pipeline.stop()
 
     df = DataFrame({'timestamp': state_change_times, 'id': state_change_target, 'state change': state_changes})
@@ -77,4 +86,4 @@ def generate(input_file, output_file):
     df.to_csv(output_file, index=False)
 
 
-generate('video.bag', 'test.csv')
+generate('de.bag', 'ac.csv')

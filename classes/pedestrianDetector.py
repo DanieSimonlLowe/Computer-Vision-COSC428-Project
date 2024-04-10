@@ -18,6 +18,7 @@ class PedestrianDetector(object):
         self.last = []
         self.model = YOLO('yolov8n-seg.pt')
         self.fps = 0
+        self.depth_intrin = None
 
     """
     Detects pedestrians
@@ -57,7 +58,7 @@ class PedestrianDetector(object):
             # for each mask adds it to the list of detected masks as a DetectedObject
 
             for mask, box in zip(people_masks, people_boxes):
-                obj = DetectedObject(mask.cpu().numpy(), box.cpu().numpy()[:4])
+                obj = DetectedObject(mask.cpu().numpy(), box.cpu().numpy()[:4], self.depth_intrin)
                 min_diff = np.inf
                 best = None
                 for old in self.last:
@@ -70,8 +71,6 @@ class PedestrianDetector(object):
                     obj.calc_trajectories(best, self.fps)
                 else:
                     obj.distance(depth_image, scale)
-                    print(obj.main_dist)
-                    obj.filter = DistanceFilter(obj.main_dist, self.fps)
                     obj.init_trajectories(self.fps)
                 detected.append(obj)
 

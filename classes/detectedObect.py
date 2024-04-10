@@ -5,6 +5,7 @@ from copy import deepcopy
 from enum import Enum
 import numpy as np
 import cv2
+import pyrealsense2 as rs
 
 from classes.distanceFilter import DistanceFilter
 
@@ -23,7 +24,7 @@ class DetectionState(Enum):
 
 
 class DetectedObject:
-    def __init__(self, mask, box):
+    def __init__(self, mask, box, depth_intrin):
         self.id = random.randint(0, sys.maxsize)
         self.box = box
         self.mask = mask
@@ -39,17 +40,33 @@ class DetectedObject:
         self.filter = None
         self.main_dist = 0
 
+        self.depth_intrin = depth_intrin
+
     def init_trajectories(self, frame_rate):
+        pos = self.deproject_box(self.box, self.main_dist)
+        self.filter = DistanceFilter(pos[2], pos[0], frame_rate)
         for dist, contour in self.tracked_contours:
-            cont_filter = DistanceFilter(dist, frame_rate, alpha=0.5)
+            box = np.array(cv2.boundingRect(contour))
+            pos = self.deproject_box(box, dist)
+            cont_filter = DistanceFilter(pos[2], pos[0], frame_rate, alpha=0.5)
 
             self.trajectories.append((cont_filter, contour, 0))
+
+    def deproject_box(self, box, depth):
+        x = box[0] + box[2] * 0.5
+        y = box[1] + box[3] * 0.5
+
+        return rs.rs2_deproject_pixel_to_point(
+            self.depth_intrin, [x, y], depth
+        )
 
     def calc_trajectories(self, old, frame_rate):
         self.id = old.id
         self.filter = deepcopy(old.filter)
         self.filter.predict()
-        self.filter.update(np.array([self.main_dist]))
+        pos = self.deproject_box(self.box, self.main_dist)
+        print(pos)
+        self.filter.update(pos[2], pos[0])
 
         olds = old.trajectories
 
@@ -57,25 +74,29 @@ class DetectedObject:
             min_diff = 1000
             best_filter = None
             best_age = 0
+            best_box = None
 
             box = np.array(cv2.boundingRect(contour))
             for cont_filter, contour2, age in olds:
                 box2 = np.array(cv2.boundingRect(contour2))
 
-                diff = np.sum((box - box2) ** 2) + 1000 * (dist - cont_filter.get_current()) ** 2
+                diff = np.sum((box - box2) ** 2) + 1000 * (dist - cont_filter.get_current()[0]) ** 2
 
                 if diff < min_diff:
                     min_diff = diff
                     best_age = age
                     best_filter = deepcopy(cont_filter)
+                    best_box = box2
 
             if best_filter is not None:
+                pos = self.deproject_box(best_box, dist)
                 best_filter.predict()
-                best_filter.update(dist)
+                best_filter.update(pos[2], pos[0])
 
-                self.trajectories.append((best_filter, contour, best_age+1))
+                self.trajectories.append((best_filter, contour, best_age + 1))
             else:
-                cont_filter = DistanceFilter(dist, frame_rate, alpha=0.5)
+                pos = self.deproject_box(box, dist)
+                cont_filter = DistanceFilter(pos[2], pos[0], frame_rate, alpha=0.5)
 
                 self.trajectories.append((cont_filter, contour, 0))
 
@@ -112,31 +133,26 @@ class DetectedObject:
             thresh = cv2.inRange(regions_image, level, level + 5)
             opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=3)
             closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel, iterations=3)
-            # self.images.append(closing)
 
             contours, hierarchy = cv2.findContours(closing, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
-            has_changed = False
-
             for cnt in contours:
                 # gets the area of the contour and checks that it is large enough
-                area = cv2.contourArea(cnt)
-                if area > min_area:
-                    # creates a mask of everything inside the contour
-                    mask_cnt = np.zeros_like(mat)
-                    mask_cnt = cv2.drawContours(mask_cnt, cnt, -1, 1, -1)
 
-                    # gets the median distance of the things inside the contour
-                    masked_cnt = np.where(mask_cnt, image, np.nan)
-                    dist_cnt = np.nanmedian(masked_cnt) * scale
+                mask_cnt = np.zeros_like(mat)
+                mask_cnt = cv2.drawContours(mask_cnt, cnt, -1, 1, -1)
 
-                    self.tracked_contours.append((dist_cnt, cnt))
+                # gets the median distance of the things inside the contour
+                masked_cnt = np.where(mask_cnt, image, np.nan)
+                dist_cnt = np.nanmedian(masked_cnt) * scale
 
-                    # if this dist is less then the min dist record the dist and the contour
-                    if dist_cnt < dist_min and dist - dist_cnt < assumed_arm_length:
-                        dist_min = dist_cnt
-                        self._contour = cnt
-                        has_changed = True
+                self.tracked_contours.append((dist_cnt, cnt))
+
+                # if this dist is less then the min dist record the dist and the contour
+                if dist_cnt < dist_min and dist - dist_cnt < assumed_arm_length:
+                    dist_min = dist_cnt
+                    self._contour = cnt
+                    has_changed = True
 
             # if has_changed:
             #     break
@@ -168,14 +184,19 @@ class DetectedObject:
 
     def get_warning_state(self, image, scale):
         dist = self.distance(image, scale)
+        if self._contour is not None:
+            box = cv2.boundingRect(self._contour)
+        else:
+            box = self.box
+        pos = self.deproject_box(box, dist)
 
-        if dist <= 3:
+        if pos[0] ** 2 + pos[2] ** 2 <= 9:
             return DetectionState.DANGER
         for cont_filter, _, age in self.trajectories:
-            if age >= 5 and cont_filter.get_prediction() <= 3:
+            if age >= 5 and cont_filter.overlap():
                 return DetectionState.WARNING
 
-        if self.filter.get_prediction() <= 3:
+        if self.filter.overlap():
             return DetectionState.WARNING
 
         return DetectionState.SAFE
