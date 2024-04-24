@@ -46,7 +46,7 @@ def generate(input_file, output_file):
         detector.depth_intrin = depth_frame.profile.as_video_stream_profile().intrinsics
 
         detector.fps = min(depth_frame.get_profile().as_video_stream_profile().fps(),
-                           color_frame.get_profile().as_video_stream_profile().fps())
+                           color_frame.get_profile().as_video_stream_profile().fps(), 19.6)
 
         # converted the color frame to a numpy array
         color_image = np.asanyarray(color_frame.get_data())
@@ -86,4 +86,4 @@ def generate(input_file, output_file):
     df.to_csv(output_file, index=False)
 
 
-generate('de.bag', 'ac.csv')
+generate('ee.bag', 'ac.csv')

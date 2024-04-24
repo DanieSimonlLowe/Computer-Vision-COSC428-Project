@@ -65,7 +65,6 @@ class DetectedObject:
         self.filter = deepcopy(old.filter)
         self.filter.predict()
         pos = self.deproject_box(self.box, self.main_dist)
-        print(pos)
         self.filter.update(pos[2], pos[0])
 
         olds = old.trajectories

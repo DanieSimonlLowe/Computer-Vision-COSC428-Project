@@ -53,7 +53,7 @@ while cv2.waitKey(1) < 0:
     detector.depth_intrin = depth_frame.profile.as_video_stream_profile().intrinsics
 
     detector.fps = min(depth_frame.get_profile().as_video_stream_profile().fps(),
-              color_frame.get_profile().as_video_stream_profile().fps())
+                       color_frame.get_profile().as_video_stream_profile().fps(), 19.6)
 
     # converted the color frame to a numpy array
     color_image = np.asanyarray(color_frame.get_data())
@@ -88,8 +88,8 @@ while cv2.waitKey(1) < 0:
     # display the distance of the closest object
     if closest is not None:
         color_image = closest.show_distance(color_image)
-    #color_image = cv2.putText(color_image, str(time.time() - start_time), (50, 100), cv2.FONT_HERSHEY_SIMPLEX,
-                        #1, (0, 0, 0), 2, cv2.LINE_AA)
+    # color_image = cv2.putText(color_image, str(time.time() - start_time), (50, 100), cv2.FONT_HERSHEY_SIMPLEX,
+    # 1, (0, 0, 0), 2, cv2.LINE_AA)
 
     # show the color_image with overlays
     cv2.imshow('frame', color_image)
