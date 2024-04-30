@@ -2,6 +2,7 @@ import time
 
 import numpy as np
 import cv2
+from pandas import DataFrame
 
 from classes.detectedObect import DetectionState
 from classes.pedestrianDetector import PedestrianDetector
@@ -62,7 +63,7 @@ while cv2.waitKey(1) < 0:
     depth_image = np.asanyarray(depth_frame.get_data())
 
     # detected pedestrians from the color image.
-    start = time.time()
+    # start = time.time()
 
     objects = detector.detect(color_image, depth_image, depth_scale)
 
@@ -84,7 +85,7 @@ while cv2.waitKey(1) < 0:
             min_dist = obj.distance()
             closest = obj
 
-    comp_times.append(time.time() - start)
+    # comp_times.append(time.time() - start)
     # display the distance of the closest object
     if closest is not None:
         color_image = closest.show_distance(color_image)
@@ -97,7 +98,10 @@ while cv2.waitKey(1) < 0:
     # delay = (1 / detector.fps) * slow_motion_factor
     # time.sleep(delay)
 
-print(np.mean(np.array(comp_times)))
+# comp_times = np.array(comp_times)
+# df = DataFrame({'comp_times': comp_times})
+# df.to_csv('5.csv')
+# print(np.var(comp_times))
 
 pipeline.stop()
 cv2.destroyAllWindows()

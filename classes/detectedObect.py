@@ -129,8 +129,8 @@ class DetectedObject:
         dist_min = dist
         for level in range(0, 250, 5):
             thresh = cv2.inRange(regions_image, level, level + 5)
-            opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=3)
-            closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel, iterations=3)
+            opening = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel, iterations=5)
+            closing = cv2.morphologyEx(opening, cv2.MORPH_CLOSE, kernel, iterations=5)
 
             contours, hierarchy = cv2.findContours(closing, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
 
