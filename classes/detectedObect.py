@@ -22,7 +22,9 @@ class DetectionState(Enum):
     WARNING = 2
     DANGER = 3
 
-
+"""
+    the detected object code where most of my program resides.
+"""
 class DetectedObject:
     def __init__(self, mask, box, depth_intrin):
         self.id = random.randint(0, sys.maxsize)
@@ -42,6 +44,9 @@ class DetectedObject:
 
         self.depth_intrin = depth_intrin
 
+    """
+        initializes the tracked objects that are the whole object or it's parts.
+    """
     def init_trajectories(self, frame_rate):
         pos = self.deproject_box(self.box, self.main_dist)
         self.filter = DistanceFilter(pos[2], pos[0], frame_rate)
@@ -52,6 +57,8 @@ class DetectedObject:
 
             self.trajectories.append((cont_filter, contour))
 
+    """gets the 3d coordinates of the center of some box with it's depth (is the median depth so it not really the 
+    center pos)."""
     def deproject_box(self, box, depth):
         x = box[0] + box[2] * 0.5
         y = box[1] + box[3] * 0.5
@@ -60,6 +67,7 @@ class DetectedObject:
             self.depth_intrin, [x, y], depth
         )
 
+    """updates the trajectories of all the parts of the detected object using the current frame segmentation"""
     def calc_trajectories(self, old, frame_rate):
         self.id = old.id
         self.filter = deepcopy(old.filter)
@@ -108,7 +116,6 @@ class DetectedObject:
     :return distance: the distance from the camera in meters
     :raise error: is thrown if the image or scale has not been provided and the distance is not calculated yet
     """
-
     def distance(self, image=None, scale=None):
         if self._distance is not None:
             return self._distance
@@ -159,6 +166,7 @@ class DetectedObject:
         self._distance = dist_min
         return dist_min
 
+    """is used for sorting the objects"""
     def get_diff(self, old, image=None, scale=None):
         old_dist = old.main_dist
         self.distance(image, scale)
@@ -204,6 +212,7 @@ class DetectedObject:
     """
 
     def highlight(self, image, color):
+        # this code fills the contours.
         # if len(self.images) > 0:
         #     colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255),]
         #     for i, img in enumerate(self.images):

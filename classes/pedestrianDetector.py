@@ -5,7 +5,6 @@ from ultralytics import YOLO
 import torch
 
 from classes.detectedObect import DetectedObject
-from classes.distanceFilter import DistanceFilter
 
 
 class PedestrianDetector(object):

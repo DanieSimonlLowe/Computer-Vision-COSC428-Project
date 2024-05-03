@@ -8,7 +8,9 @@ from classes.detectedObect import DetectionState
 from classes.pedestrianDetector import PedestrianDetector
 import pyrealsense2 as rs
 
-
+"""
+    used to generate a csv file for testing.
+"""
 def generate(input_file, output_file):
     config = rs.config()
     config.enable_device_from_file(input_file, repeat_playback=False)

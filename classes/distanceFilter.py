@@ -16,7 +16,9 @@ def state_transition(state, dt):
 def measurement_function(state):
     return state[:2]
 
-
+"""
+    an unscented Kalman filter that dose basic 2d motion measurements and prediction.
+"""
 class DistanceFilter(object):
     def __init__(self, dist, x, frame_rate, alpha=0.1):
         dt = 1 / frame_rate
@@ -47,7 +49,6 @@ class DistanceFilter(object):
 
         start = complex(self.ukf.x[0], self.ukf.x[1])
         end = complex(self.ukf.x[0] + 3 * self.ukf.x[2], self.ukf.x[1] + 3 * self.ukf.x[3])
-        print(start, end)
 
         if abs(start) < 3 or abs(end) < 3:
             return True

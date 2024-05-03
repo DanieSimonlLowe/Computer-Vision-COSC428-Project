@@ -2,7 +2,6 @@ import time
 
 import numpy as np
 import cv2
-from pandas import DataFrame
 
 from classes.detectedObect import DetectionState
 from classes.pedestrianDetector import PedestrianDetector
